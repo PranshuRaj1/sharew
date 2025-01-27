@@ -2,9 +2,28 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const WebSocket = require("ws");
 
 const app = express();
 const PORT = 3000;
+
+// Configure WebSocket server
+const wss = new WebSocket.Server({ noServer: true });
+const clients = new Set();
+
+// Handle WebSocket connections
+wss.on("connection", (ws) => {
+  clients.add(ws);
+  ws.on("close", () => clients.delete(ws));
+});
+
+const notifyClients = () => {
+  for (const client of clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send("update");
+    }
+  }
+};
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -14,9 +33,7 @@ const storage = multer.diskStorage({
     }
     cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  },
+  filename: (req, file, cb) => cb(null, file.originalname),
 });
 const upload = multer({ storage });
 
@@ -24,22 +41,25 @@ app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
 app.post("/upload", upload.single("file"), (req, res) => {
-  res.status(200).json({
-    message: "File uploaded successfully!",
-    filename: req.file.originalname,
-  });
+  res.status(200).json({ message: "File uploaded successfully!" });
+  notifyClients();
 });
 
 app.get("/files", (req, res) => {
   const uploadDir = path.join(__dirname, "uploads");
   fs.readdir(uploadDir, (err, files) => {
-    if (err) {
-      return res.status(500).json({ message: "Unable to list files" });
-    }
+    if (err) return res.status(500).json({ message: "Unable to list files" });
     res.json(files);
   });
 });
 
-app.listen(PORT, () => {
+// Handle WebSocket upgrade
+const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+});
+
+server.on("upgrade", (req, socket, head) => {
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit("connection", ws, req);
+  });
 });

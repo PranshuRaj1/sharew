@@ -39,7 +39,9 @@
       const uploadForm = document.getElementById("uploadForm");
       const fileList = document.getElementById("fileList");
 
-      // Fetch and display the list of files
+      const serverUrl = `ws://${window.location.hostname}:3000`;
+      const socket = new WebSocket(serverUrl);
+
       async function fetchFiles() {
         const response = await fetch("/files");
         const files = await response.json();
@@ -54,7 +56,6 @@
           .join("");
       }
 
-      // Handle file upload
       uploadForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const formData = new FormData();
@@ -67,13 +68,16 @@
 
         if (response.ok) {
           alert("File uploaded successfully!");
-          fetchFiles(); // Refresh the file list
+          fileInput.value = "";
         } else {
           alert("Failed to upload file.");
         }
       });
 
-      // Initial fetch of files
+      socket.onmessage = () => {
+        fetchFiles();
+      };
+
       fetchFiles();
     </script>
   </body>
