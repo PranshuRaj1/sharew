@@ -27,6 +27,12 @@
     <h1>Wi-Fi File Sharing</h1>
 
     <form id="uploadForm">
+      <input
+        type="text"
+        id="nameInput"
+        placeholder="Enter your name"
+        required
+      />
       <input type="file" id="fileInput" required />
       <button type="submit">Upload</button>
     </form>
@@ -35,6 +41,7 @@
     <ul id="fileList"></ul>
 
     <script>
+      const nameInput = document.getElementById("nameInput");
       const fileInput = document.getElementById("fileInput");
       const uploadForm = document.getElementById("uploadForm");
       const fileList = document.getElementById("fileList");
@@ -42,6 +49,7 @@
       const serverUrl = `ws://${window.location.hostname}:3000`;
       const socket = new WebSocket(serverUrl);
 
+      // Fetch and display the list of files
       async function fetchFiles() {
         const response = await fetch("/files");
         const files = await response.json();
@@ -56,10 +64,13 @@
           .join("");
       }
 
+      // Handle file upload
       uploadForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+
         const formData = new FormData();
         formData.append("file", fileInput.files[0]);
+        formData.append("name", nameInput.value.trim() || "Anonymous");
 
         const response = await fetch("/upload", {
           method: "POST",
@@ -69,15 +80,18 @@
         if (response.ok) {
           alert("File uploaded successfully!");
           fileInput.value = "";
+          nameInput.value = "";
         } else {
           alert("Failed to upload file.");
         }
       });
 
+      // Refresh file list on WebSocket message
       socket.onmessage = () => {
         fetchFiles();
       };
 
+      // Initial fetch of files
       fetchFiles();
     </script>
   </body>

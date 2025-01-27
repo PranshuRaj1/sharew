@@ -11,7 +11,6 @@ const PORT = 3000;
 const wss = new WebSocket.Server({ noServer: true });
 const clients = new Set();
 
-// Handle WebSocket connections
 wss.on("connection", (ws) => {
   clients.add(ws);
   ws.on("close", () => clients.delete(ws));
@@ -25,6 +24,7 @@ const notifyClients = () => {
   }
 };
 
+// Configure storage for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, "uploads");
@@ -40,11 +40,22 @@ const upload = multer({ storage });
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 
+// Handle file uploads
 app.post("/upload", upload.single("file"), (req, res) => {
+  const userName = req.body.name || "Anonymous";
+  const fileName = req.file.originalname;
+  const fileSize = req.file.size;
+
+  // Log the upload details
+  console.log(`File uploaded by ${userName}:`);
+  console.log(`  - File Name: ${fileName}`);
+  console.log(`  - File Size: ${fileSize} bytes`);
+
   res.status(200).json({ message: "File uploaded successfully!" });
-  notifyClients();
+  notifyClients(); // Notify clients about the new file
 });
 
+// Serve the list of files
 app.get("/files", (req, res) => {
   const uploadDir = path.join(__dirname, "uploads");
   fs.readdir(uploadDir, (err, files) => {
