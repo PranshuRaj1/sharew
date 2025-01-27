@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wi-Fi File Sharing</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      h1 {
+        text-align: center;
+      }
+      #uploadForm {
+        margin-bottom: 20px;
+      }
+      #fileList {
+        margin-top: 20px;
+      }
+      .file-item {
+        margin: 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Wi-Fi File Sharing</h1>
+
+    <form id="uploadForm">
+      <input type="file" id="fileInput" required />
+      <button type="submit">Upload</button>
+    </form>
+
+    <h2>Shared Files</h2>
+    <ul id="fileList"></ul>
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const uploadForm = document.getElementById("uploadForm");
+      const fileList = document.getElementById("fileList");
+
+      // Fetch and display the list of files
+      async function fetchFiles() {
+        const response = await fetch("/files");
+        const files = await response.json();
+        fileList.innerHTML = files
+          .map(
+            (file) => `
+        <li class="file-item">
+          <a href="/uploads/${file}" download>${file}</a>
+        </li>
+      `
+          )
+          .join("");
+      }
+
+      // Handle file upload
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        const response = await fetch("/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          alert("File uploaded successfully!");
+          fetchFiles(); // Refresh the file list
+        } else {
+          alert("Failed to upload file.");
+        }
+      });
+
+      // Initial fetch of files
+      fetchFiles();
+    </script>
+  </body>
+</html>
